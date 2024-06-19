@@ -1,32 +1,53 @@
 from random import choice
+import telebot
 
-print('Здравствуй мой друг.\nВ этой игре тебе необходимо определить цвет масти!')
-print()
+from keys import TOKEN
 
-cards = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'T']
-suits = ['♦️', '♥️', '♣️', '♠️']
+bot = telebot.TeleBot(TOKEN)
 
-correct_answers = ['красная', 'к', 'черная', 'ч']
 
-random_card = choice(cards)
-random_suit = choice(suits)
+@bot.message_handler(commands=['start'])
+def start(message):
+    keyboard = telebot.types.ReplyKeyboardMarkup()
 
-answer = input(
-    'Какой цвет масти загадал бот?\nВведите К(Красная) или Ч(Черная)\n').lower()
+    red_button = telebot.types.KeyboardButton('🟥')
+    black_button = telebot.types.KeyboardButton('⬛️')
 
-correct_answer_print = f'Верно! Бот загадал {random_card}{random_suit}'
-wrong_answer_print = f'Неверно! Бот загадал {random_card}{random_suit}'
+    keyboard.row(red_button)
+    keyboard.row(black_button)
 
-print()
+    bot.send_message(message.chat.id, 'Здравствуй мой друг!\nВ этой игре тебе необходимо определить цвет масти!',
+                     reply_markup=keyboard)
 
-while not answer in correct_answers:
-    answer = input(
-        'Введите букву К или Ч.\nВы также можете ввести слово целиком Красная или Черная\n')
-    print()
+    bot.register_next_step_handler(message, compare_answers)
 
-if answer in ['к', 'красная'] and random_suit in ['♦️', '♥️']:
-    print(correct_answer_print)
-elif answer in ['ч', 'черная'] and random_suit in ['♣️', '♠️']:
-    print(correct_answer_print)
-else:
-    print(wrong_answer_print)
+
+def compare_answers(message):
+    card, suit = generate_card()
+
+    answer = message.text
+
+    correct_answer_print = f'Верно! Бот загадал {card}{suit}'
+    wrong_answer_print = f'Неверно! Бот загадал {card}{suit}'
+
+    if answer == '🟥' and suit in ['♦️', '♥️']:
+        bot.send_message(message.chat.id, correct_answer_print)
+    elif answer == '⬛️' and suit in ['♣️', '♠️']:
+        bot.send_message(message.chat.id, correct_answer_print)
+    else:
+        bot.send_message(message.chat.id, wrong_answer_print)
+
+    start(message)
+
+
+def generate_card():
+    cards = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'T']
+    suits = ['♦️', '♥️', '♣️', '♠️']
+
+    random_card = choice(cards)
+    random_suit = choice(suits)
+
+    return random_card, random_suit
+
+
+bot.polling(non_stop=True)
