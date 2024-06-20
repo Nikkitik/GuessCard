@@ -1,28 +1,28 @@
+import asyncio
 from random import choice
-import telebot
+from aiogram import Bot, Dispatcher, types, F
+from aiogram.filters import CommandStart
+from aiogram.types import BotCommand
 
 from keys import TOKEN
+from keyboards import reply
 
-bot = telebot.TeleBot(TOKEN)
+MENU_COMMANDS = [
+    BotCommand(command='start', description='Начать игру!')
+]
 
-
-@bot.message_handler(commands=['start'])
-def start(message):
-    keyboard = telebot.types.ReplyKeyboardMarkup()
-
-    red_button = telebot.types.KeyboardButton('🟥')
-    black_button = telebot.types.KeyboardButton('⬛️')
-
-    keyboard.row(red_button)
-    keyboard.row(black_button)
-
-    bot.send_message(message.chat.id, 'Здравствуй мой друг!\nВ этой игре тебе необходимо определить цвет масти!',
-                     reply_markup=keyboard)
-
-    bot.register_next_step_handler(message, compare_answers)
+bot = Bot(token=TOKEN)
+dp = Dispatcher()
 
 
-def compare_answers(message):
+@dp.message(CommandStart())
+async def start(message: types.Message):
+    await message.answer('Здравствуй мой друг!\nВ этой игре тебе необходимо определить цвет масти!',
+                         reply_markup=reply.two_color_keyboard)
+
+
+@dp.message((F.text == '🟥') | (F.text == '⬛️'))
+async def compare_answers(message: types.Message):
     card, suit = generate_card()
 
     answer = message.text
@@ -31,11 +31,11 @@ def compare_answers(message):
     wrong_answer_print = f'Неверно! Бот загадал {card}{suit}'
 
     if answer == '🟥' and suit in ['♦️', '♥️']:
-        bot.send_message(message.chat.id, correct_answer_print)
+        await message.answer(correct_answer_print)
     elif answer == '⬛️' and suit in ['♣️', '♠️']:
-        bot.send_message(message.chat.id, correct_answer_print)
+        await message.answer(correct_answer_print)
     else:
-        bot.send_message(message.chat.id, wrong_answer_print)
+        await message.answer(wrong_answer_print)
 
     start(message)
 
@@ -50,4 +50,10 @@ def generate_card():
     return random_card, random_suit
 
 
-bot.polling(non_stop=True)
+async def main():
+    await bot.delete_webhook(drop_pending_updates=True)
+    # await bot.delete_my_commands(scope=types.BotCommandScopeAllPrivateChats())
+    await bot.set_my_commands(commands=MENU_COMMANDS, scope=types.BotCommandScopeAllPrivateChats())
+    await dp.start_polling(bot)
+
+asyncio.run(main())
