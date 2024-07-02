@@ -4,4 +4,4 @@ __pycache__/
 # Environments
 .venv
 
-keys.py
+config.py
